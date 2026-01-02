@@ -49,15 +49,15 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ isPlaying, onTogglePlay, prev
   }, [isPlaying]);
 
   return (
-    <div className="w-full max-w-sm bg-slate-900 text-white rounded-2xl p-4 shadow-xl flex items-center gap-4 border border-slate-700">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-green-500 shadow-lg ${isPlaying ? 'animate-spin-slow' : ''}`}>
-        <Disc className="w-6 h-6 text-black" />
+    <div className="w-full max-w-[90vw] sm:max-w-sm bg-slate-900 text-white rounded-2xl p-3 sm:p-4 shadow-xl flex items-center gap-3 sm:gap-4 border border-slate-700">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-green-500 shadow-lg shrink-0 ${isPlaying ? 'animate-spin-slow' : ''}`}>
+        <Disc className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
       </div>
       
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <span className="text-xs font-bold text-green-400">Spotify Preview</span>
-          <span className="text-[10px] text-slate-400">00:{Math.floor(progress / 100 * 30).toString().padStart(2, '0')}</span>
+          <span className="text-[10px] sm:text-xs font-bold text-green-400 uppercase tracking-wider">Spotify Preview</span>
+          <span className="text-[10px] text-slate-400 font-mono">00:{Math.floor(progress / 100 * 30).toString().padStart(2, '0')}</span>
         </div>
         <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
           <div 
@@ -69,9 +69,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ isPlaying, onTogglePlay, prev
 
       <button 
         onClick={onTogglePlay}
-        className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-slate-200 transition-colors"
+        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0"
       >
-        {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
+        {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" />}
       </button>
 
       <style>{`

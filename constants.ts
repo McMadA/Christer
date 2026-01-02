@@ -164,5 +164,14 @@ export const MOCK_DECK: SongCard[] = [
     category: 'Basis',
     difficulty: 'Groen',
     spotifyPreviewUrl: getPreview(17)
+  },
+  {
+    id: 'wild1',
+    title: 'JOKER: Plaats waar je wilt!',
+    artist: 'Gratis Punt',
+    year: 2024, // Year is revealed after placement, acting as a new anchor
+    category: 'Wildcard',
+    difficulty: 'Groen',
+    question: 'Deze kaart is een cadeau! Je mag hem op elke plek in de tijdlijn leggen.'
   }
 ];
