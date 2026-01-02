@@ -1,0 +1,41 @@
+name: 🚀 Nieuwe update jonguh
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Gebruik een actuele LTS-versie van Node.js
+          # caching disabled because this repo does not contain a lockfile
+          # (actions/setup-node expects a lockfile like package-lock.json).
+
+      - name: 📦 Install dependencies
+        run: npm install # Of 'bun install' als je bun gebruikt
+
+      - name: 🏗️ Build project
+        run: npm run build # Of 'bun run build' als je bun gebruikt
+
+      - name: 📂 Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: web0156.zxcs.nl
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          # Belangrijk: De 'local-dir' verwijst nu naar de map met de gebouwde bestanden
+          local-dir: ./dist/ 
+          server-dir: domains/creationaltfix.nl/public_html/christer/
+          # Optioneel: Verwijder bestanden op de server die niet in de 'dist' map staan
+          dangerous-clean-slate: true
