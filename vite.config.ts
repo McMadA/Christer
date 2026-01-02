@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      // When deploying to a subpath (FTP -> /christer/) set base so
+      // built assets reference `/christer/` instead of `/`.
+      base: '/christer/',
       server: {
         port: 3000,
         host: '0.0.0.0',
