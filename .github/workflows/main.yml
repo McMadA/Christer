@@ -20,6 +20,19 @@ jobs:
           # Enable npm cache now that `package-lock.json` exists in the repo.
           cache: 'npm'
 
+      - name: ⚡️ Restore npm cache (explicit)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: 🧹 Ensure clean node_modules
+        run: |
+          if [ -d node_modules ]; then rm -rf node_modules; fi
+          if [ -f package-lock.json ] && [ ! -s package-lock.json ]; then echo "empty lockfile"; fi
+
       - name: 📦 Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
 
@@ -28,6 +41,13 @@ jobs:
         # can be missed during install on runners — rebuild to ensure
         # platform-specific optional packages are present.
         run: npm rebuild || true
+
+      - name: 🔧 Install Rollup native binary fallback (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Attempt to explicitly install the native rollup package the error references.
+          # This is a fallback for CI runners where optional deps were skipped by npm.
+          npm install @rollup/rollup-linux-x64-gnu --no-save || true
 
       - name: 🏗️ Build project
         run: npm run build # Of 'bun run build' als je bun gebruikt
