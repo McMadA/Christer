@@ -17,7 +17,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20' # Gebruik een actuele LTS-versie van Node.js
-          cache: 'npm' # Optioneel: versnelt toekomstige builds
+          # caching disabled because this repo does not contain a lockfile
+          # (actions/setup-node expects a lockfile like package-lock.json).
 
       - name: 📦 Install dependencies
         run: npm install # Of 'bun install' als je bun gebruikt
@@ -35,6 +36,6 @@ jobs:
           port: 21
           # Belangrijk: De 'local-dir' verwijst nu naar de map met de gebouwde bestanden
           local-dir: ./dist/ 
-          server-dir: domains/creationaltfix.nl/public_html/christer
+          server-dir: domains/creationaltfix.nl/public_html/christer/
           # Optioneel: Verwijder bestanden op de server die niet in de 'dist' map staan
           dangerous-clean-slate: true
