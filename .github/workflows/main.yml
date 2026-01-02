@@ -17,11 +17,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20' # Gebruik een actuele LTS-versie van Node.js
-          # caching disabled because this repo does not contain a lockfile
-          # (actions/setup-node expects a lockfile like package-lock.json).
+          # Enable npm cache now that `package-lock.json` exists in the repo.
+          cache: 'npm'
 
       - name: 📦 Install dependencies
-        run: npm install # Of 'bun install' als je bun gebruikt
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: 🛠️ Rebuild native modules
+        # Some native optional dependencies (e.g. rollup native binaries)
+        # can be missed during install on runners — rebuild to ensure
+        # platform-specific optional packages are present.
+        run: npm rebuild || true
 
       - name: 🏗️ Build project
         run: npm run build # Of 'bun run build' als je bun gebruikt
