@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SongCard,
   GameState,
@@ -8,13 +8,28 @@ import {
   PLAYER_COLORS,
   DIFFICULTY_SETTINGS,
   getCurrentPlayer,
+  SCORING,
 } from './types';
 import { MOCK_DECK } from './constants';
 import { shuffleArray } from './utils/shuffle';
-import { calculateScore, getStreakText } from './utils/scoring';
+import { calculateScore, getStreakText, hasStreakBonus } from './utils/scoring';
 import { validatePlacement } from './utils/validation';
 import CardComponent from './components/CardComponent';
 import AudioPlayer from './components/AudioPlayer';
+import InhoudModal from './components/InhoudModal';
+import ScorePopup from './components/ScorePopup';
+import {
+  playCorrect,
+  playWrong,
+  playStreak,
+  playTurn,
+  playGameOver,
+  playLifeLost,
+  playQuestionCorrect,
+  playQuestionWrong,
+  playCardDraw,
+  initAudio,
+} from './utils/sounds';
 import {
   RefreshCw,
   Heart,
@@ -48,8 +63,25 @@ export default function App() {
   const [playerCount, setPlayerCount] = useState(2);
   const [playerNames, setPlayerNames] = useState<string[]>(['', '']);
 
+  // Inhoud modal state
+  const [showInhoudModal, setShowInhoudModal] = useState(false);
+  const [inhoudAnsweredCorrectly, setInhoudAnsweredCorrectly] = useState(false);
+
+  // Score popup state for animations
+  const [scorePopup, setScorePopup] = useState<{ points: number; x: number; y: number } | null>(null);
+
   // Get current player helper
   const currentPlayer = getCurrentPlayer(gameState);
+
+  // Initialize audio on first interaction
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      initAudio();
+      document.removeEventListener('click', handleFirstInteraction);
+    };
+    document.addEventListener('click', handleFirstInteraction);
+    return () => document.removeEventListener('click', handleFirstInteraction);
+  }, []);
 
   // Handle difficulty selection
   const selectDifficulty = (difficulty: GameDifficulty) => {
@@ -108,6 +140,9 @@ export default function App() {
       isEliminated: false,
     }));
 
+    // Play card draw sound
+    playCardDraw();
+
     setGameState({
       ...gameState,
       status: 'playing',
@@ -121,6 +156,29 @@ export default function App() {
       winner: undefined,
     });
     setIsPlaying(false);
+    setInhoudAnsweredCorrectly(false);
+
+    // Check if first card is Inhoud - show modal
+    if (nextCard.category === 'Inhoud' && nextCard.question) {
+      setTimeout(() => setShowInhoudModal(true), 300);
+    }
+  };
+
+  // Handle Inhoud modal answer
+  const handleInhoudAnswer = (correct: boolean) => {
+    setInhoudAnsweredCorrectly(correct);
+    setShowInhoudModal(false);
+    if (correct) {
+      playQuestionCorrect();
+    } else {
+      playQuestionWrong();
+    }
+  };
+
+  // Handle Inhoud modal skip
+  const handleInhoudSkip = () => {
+    setInhoudAnsweredCorrectly(false);
+    setShowInhoudModal(false);
   };
 
   // Handle card placement
@@ -130,13 +188,24 @@ export default function App() {
     const result = validatePlacement(gameState.currentCard, gameState.timeline, insertIndex);
 
     if (result.isCorrect) {
-      // Calculate score
+      // Calculate score with Inhoud bonus
+      const newStreakCount = currentPlayer.streakCount + 1;
       const scoreResult = calculateScore(
         gameState.currentCard,
-        currentPlayer.streakCount + 1,
+        newStreakCount,
         gameState.difficulty,
-        false // TODO: question answered flag for Inhoud cards
+        inhoudAnsweredCorrectly
       );
+
+      // Play sounds
+      playCorrect();
+
+      // Check if streak milestone achieved
+      const hadStreakBefore = hasStreakBonus(currentPlayer.streakCount);
+      const hasStreakNow = hasStreakBonus(newStreakCount);
+      if (!hadStreakBefore && hasStreakNow) {
+        setTimeout(() => playStreak(), 300);
+      }
 
       // Insert card into timeline at correct position
       const newTimeline = [...gameState.timeline];
@@ -148,7 +217,7 @@ export default function App() {
           ? {
               ...p,
               score: p.score + scoreResult.totalPoints,
-              streakCount: p.streakCount + 1,
+              streakCount: newStreakCount,
             }
           : p
       );
@@ -162,6 +231,12 @@ export default function App() {
         lastScoreEvents: scoreResult.events,
       }));
     } else {
+      // Wrong placement - play sounds
+      playWrong();
+      if (currentPlayer.lives <= 1) {
+        setTimeout(() => playLifeLost(), 200);
+      }
+
       // Wrong placement
       const updatedPlayers = gameState.players.map((p, i) =>
         i === gameState.currentPlayerIndex
@@ -184,6 +259,7 @@ export default function App() {
     }
 
     setIsPlaying(false);
+    setInhoudAnsweredCorrectly(false); // Reset for next card
   };
 
   // Proceed to next turn
@@ -197,6 +273,9 @@ export default function App() {
       const winner = candidates.reduce((prev, current) =>
         current.score > prev.score ? current : prev
       );
+
+      // Play game over sound
+      playGameOver(activePlayers.length > 0);
 
       setGameState(prev => ({
         ...prev,
@@ -221,12 +300,20 @@ export default function App() {
       const winner = activePlayers.reduce((prev, current) =>
         current.score > prev.score ? current : prev
       );
+      playGameOver(true);
       setGameState(prev => ({
         ...prev,
         status: 'gameover',
         winner,
       }));
       return;
+    }
+
+    // Play sounds
+    playCardDraw();
+    // Play turn sound only in multiplayer when switching players
+    if (gameState.players.length > 1 && nextIndex !== gameState.currentPlayerIndex) {
+      playTurn();
     }
 
     setGameState(prev => ({
@@ -239,6 +326,12 @@ export default function App() {
       lastScoreEvents: undefined,
     }));
     setIsPlaying(false);
+    setInhoudAnsweredCorrectly(false);
+
+    // Check if next card is Inhoud - show modal
+    if (nextCard.category === 'Inhoud' && nextCard.question) {
+      setTimeout(() => setShowInhoudModal(true), 300);
+    }
   };
 
   // Reset game
@@ -531,8 +624,26 @@ export default function App() {
 
               {/* Correct feedback */}
               {gameState.status === 'correct' && (
-                <div className="bg-emerald-100 text-emerald-700 px-4 py-3 rounded-lg text-center">
+                <div className="bg-emerald-100 text-emerald-700 px-4 py-3 rounded-lg text-center relative overflow-visible">
+                  {/* Floating score animation */}
+                  {gameState.lastScoreEvents && (
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                      <ScorePopup
+                        points={gameState.lastScoreEvents.reduce((sum, e) => sum + e.points, 0)}
+                      />
+                    </div>
+                  )}
+
                   <div className="font-bold text-lg mb-1">Goed gedaan!</div>
+
+                  {/* Streak fire effect */}
+                  {currentPlayer && hasStreakBonus(currentPlayer.streakCount) && (
+                    <div className="animate-streak-fire inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-3 py-1 rounded-full mb-2 animate-pulse-glow">
+                      <span className="text-lg">🔥</span>
+                      <span className="font-bold">{currentPlayer.streakCount}x STREAK!</span>
+                    </div>
+                  )}
+
                   {gameState.lastScoreEvents && (
                     <div className="text-sm space-y-0.5">
                       {gameState.lastScoreEvents.map((event, i) => (
@@ -604,6 +715,17 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      {/* Inhoud Question Modal */}
+      {gameState.currentCard && (
+        <InhoudModal
+          card={gameState.currentCard}
+          isOpen={showInhoudModal}
+          allCards={MOCK_DECK}
+          onAnswer={handleInhoudAnswer}
+          onSkip={handleInhoudSkip}
+        />
+      )}
     </div>
   );
 }

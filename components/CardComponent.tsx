@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SongCard } from '../types';
 import { Music, Calendar, HelpCircle, BookOpen, Sparkles, Headphones } from 'lucide-react';
 
@@ -7,9 +7,23 @@ interface CardComponentProps {
   isRevealed: boolean; // If true, shows year and full info. If false, hides year (and title/artist for Herkenning)
   onClick?: () => void;
   className?: string;
+  animate?: boolean; // If true, animate when revealed
 }
 
-const CardComponent: React.FC<CardComponentProps> = ({ card, isRevealed, onClick, className = '' }) => {
+const CardComponent: React.FC<CardComponentProps> = ({ card, isRevealed, onClick, className = '', animate = true }) => {
+  // Track if we should show the reveal animation
+  const [wasRevealed, setWasRevealed] = useState(isRevealed);
+  const [showFlip, setShowFlip] = useState(false);
+
+  // Detect reveal transition for animation
+  useEffect(() => {
+    if (isRevealed && !wasRevealed && animate) {
+      setShowFlip(true);
+      const timer = setTimeout(() => setShowFlip(false), 600);
+      return () => clearTimeout(timer);
+    }
+    setWasRevealed(isRevealed);
+  }, [isRevealed, wasRevealed, animate]);
   // For Herkenning cards, hide title and artist until revealed
   const isHerkenning = card.category === 'Herkenning';
   const showTitleAndArtist = isRevealed || !isHerkenning;
@@ -59,10 +73,19 @@ const CardComponent: React.FC<CardComponentProps> = ({ card, isRevealed, onClick
     return 'bg-white text-slate-700';
   };
 
+  // Animation classes for flip effect
+  const flipAnimation = showFlip
+    ? 'animate-card-flip'
+    : '';
+
   return (
     <div
       onClick={onClick}
-      className={`relative w-32 h-48 sm:w-40 sm:h-56 rounded-xl border-b-4 shadow-lg flex flex-col items-center justify-between p-2 sm:p-3 text-center transition-transform hover:scale-105 cursor-default ${getBorderColor()} ${className}`}
+      className={`relative w-32 h-48 sm:w-40 sm:h-56 rounded-xl border-b-4 shadow-lg flex flex-col items-center justify-between p-2 sm:p-3 text-center transition-transform hover:scale-105 cursor-default ${getBorderColor()} ${flipAnimation} ${className}`}
+      style={{
+        transformStyle: 'preserve-3d',
+        perspective: '1000px'
+      }}
     >
       {/* Category Badge */}
       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
